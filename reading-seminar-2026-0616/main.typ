@@ -302,9 +302,8 @@
     $sigma <= n^(1\/4)$, $L <= 1$, giving $"Regret"_T = O(D G n^(1\/4) sqrt(T))$
     — a factor $n^(1\/4)$ *worse* than the $O(sqrt(T))$ of OGD (Theorem 3.1).
   - *Expert-advice FPL (Thm 5.10)*, with exponential noise, removes that
-    polynomial-in-$n$ penalty: only a $sqrt(log n)$ dependence remains.
-  - Hence FPL on the simplex is *order-optimal*, on par with the standard
-    multiplicative-weights / Hedge bound $O(sqrt(T log n))$.
+    polynomial-in-$n$ penalty: only a $sqrt(log n)$ dependence remains, on par
+    with the standard multiplicative-weights / Hedge bound $O(sqrt(T log n))$.
 ]
 
 // ------------------------------------------------------------
@@ -345,7 +344,7 @@
 == Proof of Theorem 5.10 (2/2)
 
 #[
-  #set text(size: 0.78em)
+  #set text(size: 0.76em)
 
   *Per-step term.* Bounding by the probability that the leader changes, times
   $norm(g_t)_oo <= 1$ (losses bounded by one):
@@ -360,20 +359,77 @@
   the exponential distribution,
   $
     Pr[ hat(x)_t != hat(x)_(t+1) | hat(x)_t ]
-      &= 1 - Pr[ -n(i_t) > v + g_t (i_t) | -n(i_t) > v ] \
+      & #alternatives($=$, math.class("relation", text(fill: red)[$lt.eq$]))
+        1 - Pr[ -n(i_t) > v + g_t (i_t) | -n(i_t) > v ] \
       &= 1 - (integral_(v + g_t (i_t))^oo eta e^(-eta x) dif x)
               / (integral_v^oo eta e^(-eta x) dif x)
        = 1 - e^(-eta g_t (i_t))
        <= eta g_t (i_t) = eta g_t^top hat(x)_t .
   $
 
-  #v(0.25em)
+  #only("2-")[
+    #v(0.1em)
+    #text(fill: red, weight: "bold")[
+      My reading: this first step looks like it should really be "$lt.eq$", not
+      "$=$" — I sketch why on the next slide.
+    ]
+  ]
+
+  #v(0.15em)
 
   Substituting into (5.6),
   $ bb(E) [ sum_(t=1)^T g_t^top (hat(x)_t - x^star) ]
       <= eta sum_t bb(E)_t [ g_t^top hat(x)_t ] + (4 log n) / eta , $
   which rearranges to the theorem.
   #h(1fr) #sym.square.stroked
+]
+
+// ------------------------------------------------------------
+//  5.5.3 — Remark: the marked step is only "<=" (N = 2 counterexample)
+// ------------------------------------------------------------
+== The Marked Equality is Only "$<=$": an $N = 2$ Check
+
+#[
+  #set text(size: 0.86em)
+
+  The proof's event is a *sufficient* condition for staying leader, not a
+  necessary one: it ignores that competitors also pay losses.
+
+  #v(0.45em)
+
+  #align(center)[
+    #table(
+      columns: (1.05fr, 1.35fr, 1.55fr),
+      align: (center + horizon, center + horizon, center + horizon),
+      inset: (x: 0.65em, y: 0.48em),
+      stroke: 0.6pt + m-lighter-brown,
+      table.header(
+        [Expert],
+        [Before $g_t$],
+        [After $g_t(1) = g_t(2) = 1$],
+      ),
+      table.cell(fill: m-light-brown.lighten(86%))[1 = leader],
+      table.cell(fill: m-light-brown.lighten(92%))[$S_1$],
+      table.cell(fill: m-light-brown.lighten(92%))[$S_1 + 1$],
+      [2],
+      [$S_2 > S_1$],
+      [$S_2 + 1 > S_1 + 1$],
+    )
+  ]
+
+  #v(0.55em)
+
+  Equal losses shift both scores by the same amount, so the $arg min$ cannot
+  change:
+  $ Pr[ hat(x)_t != hat(x)_(t+1) | hat(x)_t = e_1 ] = 0 . $
+
+  But the displayed equality would give
+  $ 1 - e^(-eta g_t(1)) = 1 - e^(-eta) > 0 . $
+
+  #v(0.25em)
+
+  Thus the marked step should be "$lt.eq$", not "$=$". The direction is still
+  enough for the regret bound, so Theorem 5.10 is unaffected.
 ]
 
 // ------------------------------------------------------------
@@ -412,7 +468,7 @@ gradient-norm term in (5.7).
     [3:], [#kw("for") $t = 1$ to $T$ #kw("do")],
     [4:], [#h(1.2em) Predict $x_t$, suffer loss $f_t (x_t)$.],
     [5:], [#h(1.2em) Update $G_t = G_(t-1) + nabla_t nabla_t^top$ and define
-      $ "(diagonal)" quad & H_t = arg min_(H succ.eq 0, space H = "diag"(H)) {G_t dot H^(-1) + "Tr"(H)} = "diag"(G_t^(1/2)) \
+      $ "(diagonal)" quad & H_t = arg min_(H succ.eq 0, space H = "diag"(H)) {G_t dot H^(-1) + "Tr"(H)} = ("diag"(G_t))^(1/2) \
         "(full matrix)" quad & H_t = arg min_(H succ.eq 0) {G_t dot H^(-1) + "Tr"(H)} = G_t^(1/2) $],
     [6:], [#h(1.2em) Update $y_(t+1) = x_t - eta H_t^(-1) nabla_t$, #h(0.8em)
       $x_(t+1) = arg min_(x in cal(K)) norm(y_(t+1) - x)_(H_t)^2$.],
@@ -421,6 +477,414 @@ gradient-norm term in (5.7).
   v(0.1em)
   line(length: 100%, stroke: 1pt)
 })
+]
+
+== What Line 5 is Optimizing
+
+#[
+  #set text(size: 0.8em)
+
+  AdaGrad chooses the matrix $H_t$ that would have made the *observed*
+  gradients small, with a trace penalty to keep the metric from blowing up:
+  $ H_t = arg min_H { G_t dot H^(-1) + "Tr"(H) },
+    quad G_t = sum_(s=1)^t nabla_s nabla_s^top . $
+
+  #v(0.35em)
+
+  #definition([Two comparator classes])[
+    $ cal(H)_1 = { H : H = "diag"(H), H succ.eq 0, "Tr"(H) <= 1 },
+      quad
+      cal(H)_2 = { H : H succ.eq 0, "Tr"(H) <= 1 }. $
+  ]
+
+  #v(0.35em)
+
+  #lemma("5.11")[
+    For $i in {1, 2}$, with the corresponding final AdaGrad matrix $H_T$,
+    $ sqrt( min_(H in cal(H)_i) sum_(t=1)^T norm(nabla_t)_(H)^(* 2) )
+        = "Tr"(H_T) . $
+  ]
+]
+
+== Regret Bound: Compete with the Best Fixed Metric
+
+#[
+  #set text(size: 0.76em)
+
+  #theorem("5.12")[
+    Let $x_t$ be generated by Algorithm 19. With $eta = D_oo / sqrt(2)$ for the
+    diagonal version and $eta = D / sqrt(2)$ for the full-matrix version, for any
+    $x^star in cal(K)$,
+    $
+      "Regret"_T("AdaGrad-diag")
+        &<= sqrt(2) D_oo sqrt( min_(H in cal(H)_1)
+              sum_t norm(nabla_t)_(H)^(* 2) ), \
+      "Regret"_T("AdaGrad-full")
+        &<= sqrt(2) D sqrt( min_(H in cal(H)_2)
+              sum_t norm(nabla_t)_(H)^(* 2) ).
+    $
+  ]
+
+  #v(0.35em)
+
+  *Reading.* AdaGrad is nearly as good as the best fixed quadratic regularizer
+  in hindsight, chosen from the diagonal or full PSD trace ball.
+
+  #v(0.35em)
+
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 1.2em,
+    [
+      *Why the theorem follows from Lemma 5.11.*
+
+      The adaptive choice makes $"Tr"(H_T)$ exactly encode the best hindsight
+      gradient norm over $cal(H)_i$.
+    ],
+    [
+      *Why there is still a price.*
+
+      The regularizer changes over time, so the proof needs one extra drift
+      term involving $H_t - H_(t-1)$.
+    ],
+  )
+]
+
+== When AdaGrad Beats OGD
+
+#[
+  #set text(size: 0.8em)
+
+  For the unit cube in $RR^d$, $D_oo = 1$ while $D = sqrt(d)$. The textbook
+  compares the diagonal-AdaGrad and OGD bounds as
+  $
+    "Regret"_T("AdaGrad-diag")
+      &<= sqrt(2 "Tr"(("diag"(G_T))^(1/2))), \
+    "Regret"_T("OGD")
+      &<= sqrt(2 d "Tr"("diag"(G_T))) .
+  $
+
+  #v(0.35em)
+
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 1.2em,
+    [
+      *Sparse gradient geometry.*
+
+      If only a few coordinates accumulate large gradient mass, AdaGrad can
+      improve over OGD by up to a $sqrt(d)$ factor.
+    ],
+    [
+      *Dense / Euclidean geometry.*
+
+      If $G_T$ is dense, or the feasible set is closer to a Euclidean ball, OGD
+      can be better by the same order.
+    ],
+  )
+
+  #v(0.35em)
+
+  *Takeaway.* AdaGrad is not uniformly better than OGD; it wins when the data
+  geometry is coordinate-sparse or otherwise mismatched to the Euclidean metric.
+]
+
+== Analysis Roadmap for Theorem 5.12
+
+#[
+  #set text(size: 0.82em)
+
+  The proof splits AdaGrad regret into two terms, then controls each by the same
+  final quantity $"Tr"(H_T)$.
+
+  #v(0.35em)
+
+  #lemma("5.13")[
+    $
+      "Regret"_T
+        <= eta / 2 (G_T dot H_T^(-1) + "Tr"(H_T))
+          + 1 / (2 eta) sum_(t=0)^T
+              norm(x_t - x^star)_(H_t - H_(t-1))^2 .
+    $
+  ]
+
+  #v(0.45em)
+
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 1.2em,
+    [
+      *Lemma 5.14.* Gradient term:
+      $ G_T dot H_T^(-1) <= "Tr"(H_T). $
+    ],
+    [
+      *Lemma 5.15.* Drift term:
+      $ sum_t norm(x_t - x^star)_(H_t - H_(t-1))^2
+          <= D_*^2 "Tr"(H_T). $
+    ],
+  )
+
+  #v(0.35em)
+
+  Choosing $eta$ balances the two terms and recovers Theorem 5.12.
+]
+
+== Lemma 5.13: One-Step Identity
+
+#[
+  #set text(size: 0.8em)
+
+  The update is a gradient step in the current metric:
+  $ y_(t+1) = x_t - eta H_t^(-1) nabla_t . $
+
+  #v(0.35em)
+
+  Subtract $x^star$ and multiply by $H_t$:
+  $
+    y_(t+1) - x^star
+      &= x_t - x^star - eta H_t^(-1) nabla_t, \
+    H_t (y_(t+1) - x^star)
+      &= H_t (x_t - x^star) - eta nabla_t .
+  $
+
+  #v(0.45em)
+
+  Multiplying the transpose of the first line by the second line gives the
+  basic energy identity.
+]
+
+== Lemma 5.13: Expanding the Square
+
+#[
+  #set text(size: 0.78em)
+
+  Expanding in the $H_t$-norm gives the textbook equation (5.8):
+
+  #v(0.25em)
+
+  $
+    norm(y_(t+1) - x^star)_(H_t)^2
+      &= norm(x_t - x^star)_(H_t)^2
+         - 2 eta nabla_t^top (x_t - x^star)
+         + eta^2 nabla_t^top H_t^(-1) nabla_t . quad (5.8)
+  $
+
+  #v(0.5em)
+
+  Rearranging this identity will isolate the one-step regret term
+  $nabla_t^top (x_t - x^star)$.
+]
+
+== Lemma 5.13: Projection Gives Descent
+
+#[
+  #set text(size: 0.78em)
+
+  Since $x_(t+1)$ is the projection of $y_(t+1)$ in the norm induced by $H_t$,
+  $ norm(y_(t+1) - x^star)_(H_t)^2
+      >= norm(x_(t+1) - x^star)_(H_t)^2 . $
+
+  #v(0.4em)
+
+  Combining this with (5.8):
+  $
+    nabla_t^top (x_t - x^star)
+      <= eta / 2 nabla_t^top H_t^(-1) nabla_t
+        + 1 / (2 eta) (
+            norm(x_t - x^star)_(H_t)^2
+            - norm(x_(t+1) - x^star)_(H_t)^2
+          ) .
+  $
+
+  #v(0.35em)
+
+  This is the OGD proof, except that the metric changes with $t$.
+]
+
+== Lemma 5.13: Telescoping with Changing Metrics
+
+#[
+  #set text(size: 0.72em)
+
+  Summing the one-step inequality from $t = 1$ to $T$:
+  $
+    sum_(t=1)^T nabla_t^top (x_t - x^star)
+      &<= eta / 2 sum_(t=1)^T nabla_t^top H_t^(-1) nabla_t
+        + 1 / (2 eta) norm(x_1 - x^star)_(H_0)^2 \
+      &quad
+        + 1 / (2 eta) sum_(t=1)^T (
+            norm(x_t - x^star)_(H_t)^2
+            - norm(x_t - x^star)_(H_(t-1))^2
+          ) \
+      &quad
+        - 1 / (2 eta) norm(x_(T+1) - x^star)_(H_T)^2 .
+  $
+
+  #v(0.35em)
+
+  With $H_0 = 0$ and dropping the final nonnegative term,
+  $
+    sum_t nabla_t^top (x_t - x^star)
+      <= eta / 2 sum_t nabla_t^top H_t^(-1) nabla_t
+        + 1 / (2 eta) sum_(t=0)^T
+            norm(x_t - x^star)_(H_t - H_(t-1))^2 .
+  $
+]
+
+== Lemma 5.13: BTL Controls the Gradient Term
+
+#[
+  #set text(size: 0.76em)
+
+  Define
+  $ Psi_t(H) = nabla_t nabla_t^top dot H^(-1),
+    quad Psi_0(H) = "Tr"(H). $
+
+  #v(0.3em)
+
+  By construction, $H_t$ minimizes $sum_(i=0)^t Psi_i(H)$. Applying the
+  BTL Lemma 5.4,
+  $
+    sum_(t=1)^T nabla_t^top H_t^(-1) nabla_t
+      &= sum_(t=1)^T Psi_t(H_t) \
+      &<= sum_(t=1)^T Psi_t(H_T) + Psi_0(H_T) - Psi_0(H_0) \
+      &= G_T dot H_T^(-1) + "Tr"(H_T).
+  $
+
+  #v(0.35em)
+
+  Substituting this into the previous slide proves Lemma 5.13.
+]
+
+== Lemma 5.14: Explicit Optimizer
+
+#[
+  #set text(size: 0.76em)
+
+  Proposition 5.16 solves the optimization in line 5. For $A succ.eq 0$,
+  $
+    arg min_(X succ.eq 0) { A dot X^(-1) + "Tr"(X) }
+      = A^(1/2).
+  $
+
+  #v(0.35em)
+
+  With the diagonal constraint, the optimizer is
+  $
+    arg min_(X succ.eq 0, space X = "diag"(X))
+      { A dot X^(-1) + "Tr"(X) }
+      = ("diag"(A))^(1/2).
+  $
+
+  #v(0.35em)
+
+  Applying this to $A = G_T$ gives
+  $
+    H_T = G_T^(1/2) quad "or" quad H_T = ("diag"(G_T))^(1/2).
+  $
+]
+
+== Lemma 5.14: Gradient Term is at Most Trace
+
+#[
+  #set text(size: 0.78em)
+
+  For the full-matrix version,
+  $
+    G_T dot H_T^(-1)
+      = G_T dot G_T^(-1/2)
+      = "Tr"(G_T^(1/2))
+      = "Tr"(H_T).
+  $
+
+  #v(0.35em)
+
+  For the diagonal version, $H_T$ ignores off-diagonal entries:
+  $
+    G_T dot H_T^(-1)
+      = "diag"(G_T) dot ("diag"(G_T))^(-1/2)
+      = "Tr"(("diag"(G_T))^(1/2))
+      = "Tr"(H_T).
+  $
+
+  #v(0.3em)
+
+  Therefore, in both cases,
+  $ G_T dot H_T^(-1) <= "Tr"(H_T). $
+]
+
+== Lemma 5.15: Diagonal Drift Term
+
+#[
+  #set text(size: 0.75em)
+
+  For diagonal AdaGrad, $G_t succ.eq G_(t-1)$ implies
+  $H_t - H_(t-1) succ.eq 0$. Since for diagonal $H$,
+  $x^top H x <= norm(x)_oo^2 "Tr"(H)$,
+  $
+    sum_(t=1)^T
+      norm(x_t - x^star)_(H_t - H_(t-1))^2
+      &<= sum_(t=1)^T D_oo^2 "Tr"(H_t - H_(t-1)) \
+      &= D_oo^2 sum_(t=1)^T ("Tr"(H_t) - "Tr"(H_(t-1))) \
+      &<= D_oo^2 "Tr"(H_T).
+  $
+
+  #v(0.35em)
+
+  The trace telescopes because the metric increments are PSD.
+]
+
+== Lemma 5.15: Full-Matrix Drift Term
+
+#[
+  #set text(size: 0.75em)
+
+  In the full-matrix case, $H_t - H_(t-1) succ.eq 0$ and
+  $lambda_max(A) <= "Tr"(A)$ for $A succ.eq 0$:
+  $
+    sum_(t=1)^T
+      norm(x_t - x^star)_(H_t - H_(t-1))^2
+      &<= sum_(t=1)^T D^2 lambda_max(H_t - H_(t-1)) \
+      &<= D^2 sum_(t=1)^T "Tr"(H_t - H_(t-1)) \
+      &= D^2 sum_(t=1)^T ("Tr"(H_t) - "Tr"(H_(t-1))) \
+      &<= D^2 "Tr"(H_T).
+  $
+
+  #v(0.25em)
+
+  This proves Lemma 5.15.
+]
+
+== Putting the Pieces Together
+
+#[
+  #set text(size: 0.74em)
+
+  Lemma 5.13 plus Lemmas 5.14 and 5.15 gives
+  $
+    "Regret"_T
+      &<= eta / 2 (2 "Tr"(H_T))
+        + D_*^2 / (2 eta) "Tr"(H_T) \
+      &= (eta + D_*^2 / (2 eta)) "Tr"(H_T),
+  $
+  where $D_* = D_oo$ for diagonal AdaGrad and $D_* = D$ for full AdaGrad.
+
+  #v(0.35em)
+
+  Choosing $eta = D_* / sqrt(2)$ yields
+  $
+    "Regret"_T <= sqrt(2) D_* "Tr"(H_T).
+  $
+
+  #v(0.35em)
+
+  Finally, Lemma 5.11 converts $"Tr"(H_T)$ back to the best hindsight metric:
+  $
+    "Tr"(H_T)
+      = sqrt( min_(H in cal(H)_i) sum_(t=1)^T
+          norm(nabla_t)_(H)^(* 2) ),
+  $
+  which is exactly Theorem 5.12.
 ]
 
 // ------------------------------------------------------------
