@@ -149,6 +149,74 @@
     injected into the objective in place of a fixed regularizer.
 ]
 
+== Setup: Randomization and Oblivious Losses
+
+#[
+  #set text(size: 0.82em)
+
+  Randomization is another way to make the leader *stable*: instead of adding a
+  strongly convex regularizer, we add a random linear perturbation.
+
+  #v(0.35em)
+
+  In this section the losses are chosen in the *oblivious* setting:
+  $ f_1, ..., f_T $ are fixed ahead of time and do not depend on the learner's
+  random choices.
+
+  #v(0.45em)
+
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 1.2em,
+    [
+      *Algorithm 16.*
+
+      Compute the expected perturbed leader:
+      $x_t = bb(E)_n [ "leader under" space n ]$.
+    ],
+    [
+      *Algorithm 17.*
+
+      For linear losses, one sampled perturbation $n_0$ is enough in
+      expectation.
+    ],
+  )
+]
+
+== Stability of the Perturbation Distribution
+
+#[
+  #set text(size: 0.78em)
+
+  The perturbation distribution is measured by two parameters:
+  $
+    bb(E)_(n tilde cal(D)) [ norm(n)_a^* ] = sigma
+    quad "and" quad
+    integral_n abs(cal(D)(n) - cal(D)(n - u)) dif n
+      <= L norm(u)_a^* .
+  $
+
+  #v(0.35em)
+
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 1.2em,
+    [
+      *Size.* $sigma$ controls the perturbation cost
+      $ 1 / eta dot sigma D $
+    ],
+    [
+      *Sensitivity.* $L$ controls how much the leader changes when the density
+      is shifted by $u$.
+    ],
+  )
+
+  #v(0.35em)
+
+  For the uniform distribution on $[0, 1]^n$ and the Euclidean norm,
+  $ sigma_2 <= sqrt(n), quad L_2 <= 1 . $
+]
+
 // ------------------------------------------------------------
 //  5.5.1 — Regret bound (Theorem 5.8) + stability condition
 // ------------------------------------------------------------
@@ -178,11 +246,168 @@
 
 #v(0.45em)
 
+#grid(
+  columns: (1fr, 1fr),
+  gutter: 1.1em,
+  [
+    #set text(size: 0.82em)
+    *Stability cost.* The first term controls how far consecutive expected
+    leaders can move.
+  ],
+  [
+    #set text(size: 0.82em)
+    *Perturbation cost.* The second term pays for comparing the fake initial
+    leader with $x^star$.
+  ],
+)
+
+== Tool: FTL-BTL Lemma
+
 #[
-  #set text(size: 0.95em)
-  // TODO: ~2 lines of notes / remarks here.
-  - …
-  - …
+  #set text(size: 0.78em)
+
+  The proof repeatedly uses the FTL-BTL lemma from Section 5.2.
+
+  #v(0.25em)
+
+  #lemma("5.4")[
+    If $x_(t+1) in arg min_(x in cal(K)) sum_(s=0)^t g_s (x)$, then for every
+    $u in cal(K)$,
+    $ sum_(t=0)^T g_t (u) >= sum_(t=0)^T g_t (x_(t+1)) . $
+  ]
+
+  #v(0.4em)
+
+  In FPL, the perturbation is treated as a *fake initial loss*
+  $ g_0^n (x) = 1 / eta n^top x $
+  This makes perturbed-leader analysis look
+  exactly like the FTRL proof.
+]
+
+== Proof of Theorem 5.8: Random Leaders
+
+#[
+  #set text(size: 0.76em)
+
+  For fixed perturbation $n$, define the random leader and fake loss:
+  $
+    x_t^n
+      &= arg min_(x in cal(K)) { eta sum_(s=1)^(t-1) nabla_s^top x + n^top x },
+      \
+    g_0^n (x) &:= 1 / eta n^top x,
+    quad
+    g_t (x) := nabla_t^top x .
+  $
+
+  #v(0.35em)
+
+  Applying Lemma 5.4 to $g_0^n, g_1, ..., g_T$:
+  $
+    bb(E)_n [ sum_(t=0)^T g_t (u) ]
+      &>= bb(E)_n [ g_0^n (x_1^n) + sum_(t=1)^T g_t (x_(t+1)^n) ] \
+      &>= bb(E)_n [ g_0^n (x_1^n) ] + sum_(t=1)^T g_t (bb(E)_n [x_(t+1)^n]) \
+      &= bb(E)_n [ g_0^n (x_1^n) ] + sum_(t=1)^T g_t (x_(t+1)).
+  $
+]
+
+== Proof of Theorem 5.8: Regret Decomposition
+
+#[
+  #set text(size: 0.74em)
+
+  Taking $u = x^star$ in the previous slide,
+  $
+    sum_(t=1)^T nabla_t^top (x_t - x^star)
+      &<= sum_(t=1)^T g_t (x_t) - sum_(t=1)^T g_t (x_(t+1))
+        + bb(E)_n [g_0^n (x^star) - g_0^n (x_1^n)] \
+      &<= sum_(t=1)^T nabla_t^top (x_t - x_(t+1))
+        + 1 / eta bb(E)_n [ norm(n)^* norm(x^star - x_1^n) ] \
+      &<= sum_(t=1)^T nabla_t^top (x_t - x_(t+1))
+        + 1 / eta sigma D .
+  $
+
+  #v(0.35em)
+
+  Convexity of $f_t$ and Cauchy-Schwarz give
+  $
+    sum_t f_t (x_t) - sum_t f_t (x^star)
+      <= G^* sum_(t=1)^T norm(x_t - x_(t+1)) + 1 / eta sigma D . quad (5.5)
+  $
+]
+
+== Proof of Theorem 5.8: Density Shift
+
+#[
+  #set text(size: 0.76em)
+
+  It remains to show that consecutive expected leaders are close. Define
+  $
+    h_t (n) = arg min_(x in cal(K))
+      { eta sum_(s=1)^(t-1) nabla_s^top x + n^top x } .
+  $
+
+  #v(0.3em)
+
+  Then $x_t = bb(E)_n[h_t (n)]$. The next leader can be written using the same
+  $h_t$ but with a shifted perturbation:
+  $
+    x_t
+      &= integral_n h_t (n) cal(D)(n) dif n, \
+    x_(t+1)
+      &= integral_n h_t (n + eta nabla_t) cal(D)(n) dif n \
+      &= integral_n h_t (n) cal(D)(n - eta nabla_t) dif n .
+  $
+
+  #v(0.25em)
+
+  Thus stability of decisions reduces to sensitivity of the density $cal(D)$.
+]
+
+== Proof of Theorem 5.8: Bounding the Shift
+
+#[
+  #set text(size: 0.72em)
+
+  Using the density-shift expression,
+  $
+    norm(x_t - x_(t+1))
+      &= norm( integral_n h_t (n) dot (cal(D)(n) - cal(D)(n - eta nabla_t)) dif n ) \
+      &= norm( integral_n (h_t (n) - h_t (0))
+            dot (cal(D)(n) - cal(D)(n - eta nabla_t)) dif n ) \
+      &<= integral_n norm(h_t (n) - h_t (0))
+            abs(cal(D)(n) - cal(D)(n - eta nabla_t)) dif n \
+      &<= D integral_n abs(cal(D)(n) - cal(D)(n - eta nabla_t)) dif n \
+      &<= D L eta norm(nabla_t)^*
+      <= eta D L G^* .
+  $
+
+  #v(0.25em)
+
+  The only real input here is $(sigma, L)$-stability with $u = eta nabla_t$.
+]
+
+== Proof of Theorem 5.8: Final Bound
+
+#[
+  #set text(size: 0.78em)
+
+  Substitute the shift bound into (5.5):
+  $
+    "Regret"_T
+      &<= G^* sum_(t=1)^T norm(x_t - x_(t+1)) + 1 / eta sigma D \
+      &<= G^* sum_(t=1)^T eta D L G^* + 1 / eta sigma D \
+      &= eta D L (G^*)^2 T + 1 / eta sigma D .
+  $
+
+  #v(0.35em)
+
+  Optimizing over $eta$ gives the stated theorem bound:
+  $ "Regret"_T <= 2 L D G^* sqrt(sigma T) . $
+
+  #v(0.3em)
+
+  For uniform noise on $[0, 1]^n$, this gives a loose
+  $O(D G n^(1/4) sqrt(T))$ bound.
 ]
 
 // ------------------------------------------------------------
@@ -209,7 +434,7 @@
     [2:], [Sample $n_0 tilde cal(D)$. Let $hat(x)_1 in arg min_(x in cal(K)) {-n_0^top x}$.],
     [3:], [#kw("for") $t = 1$ to $T$ #kw("do")],
     [4:], [#h(1.2em) Predict $hat(x)_t$.],
-    [5:], [#h(1.2em) Observe the linear loss function, suffer loss $g_t^top x_t$.],
+    [5:], [#h(1.2em) Observe the linear loss function, suffer loss $g_t^top hat(x)_t$.],
     [6:], [#h(1.2em) Update
       $ hat(x)_t = arg min_(x in cal(K)) { eta sum_(s=1)^(t-1) g_s^top x + n_0^top x } $],
     [7:], [#kw("end for")],
@@ -220,11 +445,65 @@
 
 #v(0.45em)
 
+#grid(
+  columns: (1fr, 1fr),
+  gutter: 1.1em,
+  [
+    #set text(size: 0.82em)
+    *Linear loss.* The exact expectation in Algorithm 16 can be replaced by one
+    perturbation sample.
+  ],
+  [
+    #set text(size: 0.82em)
+    *Expected regret.* The guarantee is taken over the sampled perturbation.
+  ],
+)
+
+== Why One Sample is Enough for Linear Losses
+
 #[
-  #set text(size: 0.95em)
-  // TODO: add ~2 takeaway bullets here (same as Algorithm 16).
-  - …
-  - …
+  #set text(size: 0.78em)
+
+  Let
+  $ w_t (n) = arg min_(x in cal(K))
+      { eta sum_(s=1)^t g_s^top x + n^top x } . $
+  Algorithm 16 predicts $x_t = bb(E)_n [w_(t-1)(n)]$.
+
+  #v(0.35em)
+
+  For a linear loss $f_t (x) = g_t^top x$,
+  $
+    f_t (x_t)
+      = f_t (bb(E)_n [w_(t-1) (n)])
+      = bb(E)_n [ f_t (w_(t-1) (n)) ] .
+  $
+
+  #v(0.35em)
+
+  Therefore sampling one $n_0 tilde cal(D)$ and playing
+  $hat(x)_t = w_(t-1)(n_0)$ has the same expected loss as the exact
+  expectation-based prediction.
+]
+
+== Corollary 5.9: Expected Regret for Linear FPL
+
+#[
+  #set text(size: 0.78em)
+
+  #theorem("Corollary 5.9")[
+    For Algorithm 17,
+    $
+      bb(E)_(n_0 tilde cal(D)) [
+        sum_(t=1)^T f_t (hat(x)_t) - sum_(t=1)^T f_t (x^star)
+      ]
+      <= eta L D (G^*)^2 T + 1 / eta sigma D .
+    $
+  ]
+
+  #v(0.4em)
+
+  *Computational point.* Algorithm 17 only needs a linear optimization oracle
+  over $cal(K)$; the set need not even be convex for the oracle call itself.
 ]
 
 // ------------------------------------------------------------
@@ -272,6 +551,33 @@
     dedicated analysis, tight up to constants.
 ]
 
+== Exponential Noise for Expert Advice
+
+#[
+  #set text(size: 0.8em)
+
+  For expert advice, the perturbation is one-sided exponential noise:
+  $
+    Pr[n(i) <= x] = 1 - e^(-eta x)
+    quad (x >= 0).
+  $
+
+  #v(0.35em)
+
+  The update chooses the expert with smallest cumulative loss after subtracting
+  its random bonus:
+  $
+    hat(x)_(t+1)
+      = arg min_(x in Delta_n)
+          { sum_(s=1)^t g_s^top x - n^top x } .
+  $
+
+  #v(0.35em)
+
+  Corollary 5.9 is too loose for this simplex/exponential-noise case, so
+  Theorem 5.10 uses a direct leader-change analysis.
+]
+
 // ------------------------------------------------------------
 //  5.5.3 — Regret bound (Theorem 5.10) + order comparison
 // ------------------------------------------------------------
@@ -299,7 +605,7 @@
   #set text(size: 0.82em)
   *Why a separate analysis? — the order gap.*
   - *Generic FPL (Cor. 5.9)* on $Delta_n$: the uniform-noise instance has
-    $sigma <= n^(1\/4)$, $L <= 1$, giving $"Regret"_T = O(D G n^(1\/4) sqrt(T))$
+    $sigma <= sqrt(n)$, $L <= 1$, giving $"Regret"_T = O(D G n^(1\/4) sqrt(T))$
     — a factor $n^(1\/4)$ *worse* than the $O(sqrt(T))$ of OGD (Theorem 3.1).
   - *Expert-advice FPL (Thm 5.10)*, with exponential noise, removes that
     polynomial-in-$n$ penalty: only a $sqrt(log n)$ dependence remains, on par
@@ -931,6 +1237,34 @@ gradient-norm term in (5.7).
 // ------------------------------------------------------------
 = Exercises
 
+== Exercise 1(a): Dual of a Matrix Norm
+
+#[
+#set text(size: 0.84em)
+
+*Claim.* Let $A succ 0$ and define
+$norm(x)_A := sqrt(x^top A x)$. Then its dual norm is
+$ norm(y)_A^* = norm(y)_(A^(-1)) = sqrt(y^top A^(-1) y) . $
+
+#proof[
+  By definition,
+  $
+    norm(y)_A^*
+      = sup_(norm(x)_A <= 1) x^top y .
+  $
+  Put $z = A^(1 / 2) x$, so $x = A^(-1 / 2) z$ and
+  $norm(x)_A = norm(z)_2$. Hence
+  $
+    norm(y)_A^*
+      &= sup_(norm(z)_2 <= 1) z^top A^(-1 / 2) y \
+      &= norm(A^(-1 / 2) y)_2
+       = sqrt(y^top A^(-1) y).
+  $
+  The supremum is attained in the direction
+  $z = A^(-1 / 2)y \/ norm(A^(-1 / 2)y)_2$ when $y != 0$.
+]
+]
+
 == Exercise 1(b): Generalized Cauchy–Schwarz
 
 #[
@@ -953,68 +1287,3 @@ $ x^top y <= norm(x) dot norm(y)_* . $
   $ x^top y <= norm(x) dot norm(y)_* . $
 ]
 ]
-
-// ============================================================
-//  APPENDIX — reusable templates (hidden from the outline).
-//  Copy these patterns into the sections above as needed.
-// ============================================================
-#show: appendix
-
-= Templates <touying:hidden>
-
-== Theorem / Proof blocks
-
-#theorem("Name of result")[
-  State the claim here, with math like $R_T = O(sqrt(T))$.
-]
-
-#proof[
-  Sketch the argument; the QED square is added automatically.
-]
-
-== Definition / Lemma blocks
-
-#definition("Term")[
-  $f$ is $alpha$-strongly convex if
-  $ f(y) >= f(x) + nabla f(x)^top (y - x) + alpha / 2 norm(y - x)^2 . $
-]
-
-#lemma[Use #lemma the same way as #theorem.]
-
-== Two columns
-
-#grid(
-  columns: (1fr, 1fr),
-  gutter: 1.5em,
-  [
-    *Idea.* Text on the left, matching math on the right.
-
-    - Bullet one
-    - Bullet two
-  ],
-  [
-    $
-      x_(t+1) &= Pi_cal(K) (x_t - eta nabla f_t (x_t)) \
-      Pi_cal(K) (y) &= arg min_(x in cal(K)) norm(x - y)
-    $
-  ],
-)
-
-== Incremental reveal
-
-State the assumption. #pause
-
-Then #pause introduce the algorithm. #pause
-
-Finally, conclude.
-
-#focus-slide[
-  A big, centered takeaway statement.
-]
-
-== Bibliography
-
-Drop a `refs.bib` beside this file, then uncomment:
-
-// #bibliography("refs.bib", title: "References")
-// Inline citation: @hazan2016.
