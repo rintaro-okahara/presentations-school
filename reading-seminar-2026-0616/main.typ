@@ -149,72 +149,100 @@
     injected into the objective in place of a fixed regularizer.
 ]
 
-== Setup: Randomization and Oblivious Losses
-
-#[
-  #set text(size: 0.82em)
-
-  Randomization is another way to make the leader *stable*: instead of adding a
-  strongly convex regularizer, we add a random linear perturbation.
-
-  #v(0.35em)
-
-  In this section the losses are chosen in the *oblivious* setting:
-  $ f_1, ..., f_T $ are fixed ahead of time and do not depend on the learner's
-  random choices.
-
-  #v(0.45em)
-
-  #grid(
-    columns: (1fr, 1fr),
-    gutter: 1.2em,
-    [
-      *Algorithm 16.*
-
-      Compute the expected perturbed leader:
-      $x_t = bb(E)_n [ "leader under" space n ]$.
-    ],
-    [
-      *Algorithm 17.*
-
-      For linear losses, one sampled perturbation $n_0$ is enough in
-      expectation.
-    ],
-  )
-]
-
 == Stability of the Perturbation Distribution
 
 #[
   #set text(size: 0.78em)
 
-  The perturbation distribution is measured by two parameters:
+  We call a perturbation distribution $(sigma, L)$-*stable* when it is small
+  enough to keep the fake loss controlled, and smooth enough that shifting the
+  noise does not change the leader too much.
+
+  #v(0.35em)
+
+  #definition([$(sigma, L)$-stable distribution])[
+    With respect to the norm $norm(dot)_a$, a distribution $cal(D)$ over
+    $RR^n$ is $(sigma, L)$-stable if
+    $
+      bb(E)_(n tilde cal(D)) [ norm(n)_a^* ] = sigma
+      quad "and" quad
+      forall u in RR^n :
+      integral_n abs(cal(D)(n) - cal(D)(n - u)) dif n
+        <= L norm(u)_a^* .
+    $
+  ]
+
+  #v(0.45em)
+
+  The two constants play different roles in the regret bound:
   $
-    bb(E)_(n tilde cal(D)) [ norm(n)_a^* ] = sigma
-    quad "and" quad
-    integral_n abs(cal(D)(n) - cal(D)(n - u)) dif n
-      <= L norm(u)_a^* .
+    "Regret"_T <= eta D (G^*)^2 L T + 1 / eta sigma D .
+  $
+]
+
+== Exercise 5.8.6: Uniform Noise Check
+
+#[
+  #set text(size: 0.78em)
+
+  The exercise asks us to prove, for $cal(D) = "Unif"([0, 1]^n)$ and the
+  Euclidean norm,
+  $
+    sigma_2 < sqrt(n), quad L_2 <= 1 .
   $
 
   #v(0.35em)
 
-  #grid(
-    columns: (1fr, 1fr),
-    gutter: 1.2em,
-    [
-      *Size.* $sigma$ controls the perturbation cost
-      $ 1 / eta dot sigma D $
-    ],
-    [
-      *Sensitivity.* $L$ controls how much the leader changes when the density
-      is shifted by $u$.
-    ],
-  )
+  #text(fill: red, weight: "bold")[
+    My reading: the $sigma$ bound is fine, but the $L_2 <= 1$ claim seems too
+    strong for the stability definition above.
+  ]
 
   #v(0.35em)
 
-  For the uniform distribution on $[0, 1]^n$ and the Euclidean norm,
-  $ sigma_2 <= sqrt(n), quad L_2 <= 1 . $
+  Already in one dimension, with $cal(D)(x) = 1_[0, 1](x)$ and
+  $0 < u < 1$,
+  $
+    integral_RR abs(cal(D)(x) - cal(D)(x - u)) dif x
+      &= |[0, 1] Delta [u, 1 + u]| \
+      &= 2 u
+      > u = norm(u)_2 .
+  $
+
+  Thus $L_2 <= 1$ would require $2u <= u$, impossible for $u > 0$.
+]
+
+== Uniform Noise: A Safer Stability Bound
+
+#[
+  #set text(size: 0.74em)
+
+  Let $N tilde "Unif"([0, 1]^n)$. The size term is fine:
+  $
+    sigma_2
+      = bb(E) [ norm(N)_2 ]
+      <= sqrt( bb(E) [ norm(N)_2^2 ] )
+      = sqrt( sum_(i=1)^n bb(E) [ N_i^2 ] )
+      = sqrt(n / 3)
+      < sqrt(n).
+  $
+
+  #v(0.3em)
+
+  For the density-shift term,
+  $
+    integral abs(cal(D)(x) - cal(D)(x - u)) dif x
+      &= |[0, 1]^n Delta ([0, 1]^n + u)| \
+      &<= 2 sum_(i=1)^n min(abs(u_i), 1) \
+      &<= 2 norm(u)_1
+      <= 2 sqrt(n) norm(u)_2 .
+  $
+
+  #v(0.25em)
+
+  Therefore the usable bounds are $sigma_2 < sqrt(n)$ and
+  $L_2 <= 2 sqrt(n)$. The factor $2 sqrt(n)$ is sharp: take
+  $u = epsilon (1, ..., 1)$ and let $epsilon -> 0^+$.
 ]
 
 // ------------------------------------------------------------
@@ -230,7 +258,7 @@
     Then FPL (Algorithm 16) attains
     $ "Regret"_T <= eta D (G^*)^2 L T + 1/eta sigma D, $
     and, optimizing over $eta$,
-    $ "Regret"_T <= 2 L D G^* sqrt(sigma T) . $
+    $ "Regret"_T <= 2 D G^* sqrt(sigma L T) . $
   ]
 
   #v(0.3em)
@@ -401,13 +429,15 @@
 
   #v(0.35em)
 
-  Optimizing over $eta$ gives the stated theorem bound:
-  $ "Regret"_T <= 2 L D G^* sqrt(sigma T) . $
+  Optimizing at $eta = sqrt(sigma / (L (G^*)^2 T))$ gives the stated theorem
+  bound:
+  $ "Regret"_T <= 2 D G^* sqrt(sigma L T) . $
 
   #v(0.3em)
 
-  For uniform noise on $[0, 1]^n$, this gives a loose
-  $O(D G n^(1/4) sqrt(T))$ bound.
+  With the corrected uniform-cube bound $L <= 2 sqrt(n)$ and
+  $sigma <= sqrt(n)$, this gives a loose
+  $O(D G sqrt(n T))$ bound.
 ]
 
 // ------------------------------------------------------------
@@ -436,7 +466,7 @@
     [4:], [#h(1.2em) Predict $hat(x)_t$.],
     [5:], [#h(1.2em) Observe the linear loss function, suffer loss $g_t^top hat(x)_t$.],
     [6:], [#h(1.2em) Update
-      $ hat(x)_t = arg min_(x in cal(K)) { eta sum_(s=1)^(t-1) g_s^top x + n_0^top x } $],
+      $ hat(x)_(t+1) = arg min_(x in cal(K)) { eta sum_(s=1)^t g_s^top x + n_0^top x } $],
     [7:], [#kw("end for")],
   )
   v(0.12em)
@@ -604,9 +634,10 @@
 #[
   #set text(size: 0.82em)
   *Why a separate analysis? — the order gap.*
-  - *Generic FPL (Cor. 5.9)* on $Delta_n$: the uniform-noise instance has
-    $sigma <= sqrt(n)$, $L <= 1$, giving $"Regret"_T = O(D G n^(1\/4) sqrt(T))$
-    — a factor $n^(1\/4)$ *worse* than the $O(sqrt(T))$ of OGD (Theorem 3.1).
+  - *Generic FPL (Cor. 5.9)* on $Delta_n$: the corrected uniform-cube bound has
+    $sigma <= sqrt(n)$, $L <= 2 sqrt(n)$, giving
+    $"Regret"_T = O(D G sqrt(n T))$ — a polynomial-in-$n$ loss versus
+    the $O(sqrt(T))$ of OGD (Theorem 3.1).
   - *Expert-advice FPL (Thm 5.10)*, with exponential noise, removes that
     polynomial-in-$n$ penalty: only a $sqrt(log n)$ dependence remains, on par
     with the standard multiplicative-weights / Hedge bound $O(sqrt(T log n))$.
@@ -644,6 +675,58 @@
     norm(x^star - x_1)_1 <= 2 . $
 ]
 
+== Exercise Bound for $norm(n)_oo$: A Careful Version
+
+#[
+  #set text(size: 0.68em)
+
+  Let $N_i tilde "Exp"(eta)$ independently and
+  $M = norm(N)_oo = max_i N_i$.
+
+  #v(0.15em)
+
+  #text(fill: red, weight: "bold")[
+    My reading: the exercise bound
+    $bb(E) [M] <= (2 log n) / eta$ needs a small qualification as stated.
+  ]
+
+  #v(0.25em)
+
+  #grid(
+    columns: (1fr, 1.08fr),
+    gutter: 1.1em,
+    [
+      *Why a qualification is needed: $n = 2$.*
+      $
+        bb(E) [M]
+          &= integral_0^oo Pr[M >= t] dif t \
+          &= integral_0^oo (1 - (1 - e^(-eta t))^2) dif t \
+          &= 3 / (2 eta)
+          > (2 log 2) / eta .
+      $
+    ],
+    [
+      *One safe upper bound.* By Boole / union bound,
+      $
+        Pr[M >= t]
+          &<= sum_(i=1)^n Pr[N_i >= t] \
+          &= n e^(-eta t).
+      $
+      Also $Pr[M >= t] <= 1$. With $a = (log n) / eta$,
+      $
+        bb(E) [M]
+          &<= a + integral_a^oo n e^(-eta t) dif t \
+          &= (1 + log n) / eta .
+      $
+    ],
+  )
+
+  #v(0.25em)
+
+  Thus we can use $bb(E) [norm(N)_oo] <= (1 + log n) / eta$.
+  For $n >= 3$ this implies the stated $(2 log n) / eta$ bound.
+]
+
 // ------------------------------------------------------------
 //  5.5.3 — Proof of Theorem 5.10 (part 2/2)
 // ------------------------------------------------------------
@@ -660,13 +743,13 @@
 
   #v(0.25em)
 
-  $hat(x)_t = e_(i_t)$ leads iff $-n(i_t) > v$ for some $v$ fixed by the history;
-  it *stays* the leader iff $-n(i_t) > v + g_t (i_t)$. By the *memorylessness* of
+  $hat(x)_t = e_(i_t)$ leads iff $n(i_t) > v$ for some $v$ fixed by the history;
+  it *stays* the leader iff $n(i_t) > v + g_t (i_t)$. By the *memorylessness* of
   the exponential distribution,
   $
     Pr[ hat(x)_t != hat(x)_(t+1) | hat(x)_t ]
       & #alternatives($=$, math.class("relation", text(fill: red)[$lt.eq$]))
-        1 - Pr[ -n(i_t) > v + g_t (i_t) | -n(i_t) > v ] \
+        1 - Pr[ n(i_t) > v + g_t (i_t) | n(i_t) > v ] \
       &= 1 - (integral_(v + g_t (i_t))^oo eta e^(-eta x) dif x)
               / (integral_v^oo eta e^(-eta x) dif x)
        = 1 - e^(-eta g_t (i_t))
@@ -676,8 +759,7 @@
   #only("2-")[
     #v(0.1em)
     #text(fill: red, weight: "bold")[
-      My reading: this first step looks like it should really be "$lt.eq$", not
-      "$=$" — I sketch why on the next slide.
+      My reading: I use "$lt.eq$" for this step; the next slide explains why.
     ]
   ]
 
@@ -856,43 +938,156 @@ gradient-norm term in (5.7).
   )
 ]
 
-== When AdaGrad Beats OGD
+== When AdaGrad Beats OGD: Upper Bounds
 
 #[
-  #set text(size: 0.8em)
-
-  For the unit cube in $RR^d$, $D_oo = 1$ while $D = sqrt(d)$. The textbook
-  compares the diagonal-AdaGrad and OGD bounds as
-  $
-    "Regret"_T("AdaGrad-diag")
-      &<= sqrt(2 "Tr"(("diag"(G_T))^(1/2))), \
-    "Regret"_T("OGD")
-      &<= sqrt(2 d "Tr"("diag"(G_T))) .
-  $
-
-  #v(0.35em)
+  #set text(size: 0.62em)
 
   #grid(
-    columns: (1fr, 1fr),
-    gutter: 1.2em,
+    columns: (0.95fr, 1.05fr),
+    gutter: 1.1em,
     [
-      *Sparse gradient geometry.*
+      *Decision set.*
+      $
+        cal(K) = [0, 1]^d .
+      $
 
-      If only a few coordinates accumulate large gradient mass, AdaGrad can
-      improve over OGD by up to a $sqrt(d)$ factor.
+      #v(0.2em)
+
+      *Diameters.*
+      $
+        D_oo &= sup_(x,y in cal(K)) norm(x - y)_oo = 1, \
+        D &= sup_(x,y in cal(K)) norm(x - y)_2 = sqrt(d),
+        quad
+        norm(x - y)_2^2
+          = sum_(i=1)^d (x_i - y_i)^2 <= d .
+      $
+
+      $D_oo$ is tight at $x = (0, ..., 0)$, $y = (1, 0, ..., 0)$;
+      $D$ is tight at $x = (0, ..., 0)$, $y = (1, ..., 1)$.
+
+      #v(0.2em)
+
+      *Coordinate energy.*
+      $
+        a_i := sum_(t=1)^T g_(t,i)^2,
+        quad
+        "diag"(G_T) = "diag"(a_1, ..., a_d).
+      $
     ],
     [
-      *Dense / Euclidean geometry.*
+      #theorem("Unit cube upper bounds")[
+        $
+          "Regret"_T("AdaGrad-diag")
+            &<= sqrt(2) D_oo "Tr"(("diag"(G_T))^(1/2)) \
+            &= sqrt(2) sum_(i=1)^d sqrt(a_i), \
+          "Regret"_T("OGD")
+            &<= D sqrt(2 sum_(t=1)^T norm(g_t)_2^2) \
+            &= sqrt(2 d sum_(i=1)^d a_i).
+        $
+      ]
 
-      If $G_T$ is dense, or the feasible set is closer to a Euclidean ball, OGD
-      can be better by the same order.
+      #v(0.25em)
+
+      *Takeaway.* AdaGrad sees $sum_i sqrt(a_i)$, while OGD sees
+      $sqrt(d sum_i a_i)$. Thus AdaGrad gains when the gradient energy $a_i$
+      is concentrated on few coordinates.
+    ],
+  )
+]
+
+== Example: Sparse Gradients
+
+#[
+  #set text(size: 0.72em)
+
+  #grid(
+    columns: (0.82fr, 1.18fr),
+    gutter: 1.1em,
+    [
+      *Definition.*
+      $
+        g_t = (1, 0, ..., 0).
+      $
+      Then
+      $
+        a_1 = T,
+        quad
+        a_2 = ... = a_d = 0.
+      $
+    ],
+    [
+      #theorem("Substitute into the bounds")[
+        $
+          "Regret"_T("AdaGrad-diag")
+            &<= sqrt(2) sum_(i=1)^d sqrt(a_i)
+             = sqrt(2 T), \
+          "Regret"_T("OGD")
+            &<= sqrt(2 d sum_(i=1)^d a_i)
+             = sqrt(2 d T).
+        $
+      ]
     ],
   )
 
-  #v(0.35em)
+  #v(0.25em)
 
-  *Takeaway.* AdaGrad is not uniformly better than OGD; it wins when the data
-  geometry is coordinate-sparse or otherwise mismatched to the Euclidean metric.
+  Therefore
+  $
+    ("OGD bound") / ("AdaGrad bound")
+      = sqrt(2 d T) / sqrt(2 T)
+      = sqrt(d).
+  $
+
+  #v(0.25em)
+
+  *Takeaway.* If the gradients concentrate on one coordinate, the AdaGrad
+  upper bound is a factor $sqrt(d)$ better than the OGD upper bound.
+]
+
+== Example: Dense Gradients
+
+#[
+  #set text(size: 0.72em)
+
+  #grid(
+    columns: (0.82fr, 1.18fr),
+    gutter: 1.1em,
+    [
+      *Definition.*
+      $
+        g_t = (1, 1, ..., 1).
+      $
+      Then all coordinates have the same energy:
+      $
+        a_1 = ... = a_d = T.
+      $
+    ],
+    [
+      #theorem("Substitute into the bounds")[
+        $
+          "Regret"_T("AdaGrad-diag")
+            &<= sqrt(2) sum_(i=1)^d sqrt(a_i)
+             = sqrt(2) d sqrt(T), \
+          "Regret"_T("OGD")
+            &<= sqrt(2 d sum_(i=1)^d a_i)
+             = sqrt(2 d dot d T)
+             = sqrt(2) d sqrt(T).
+        $
+      ]
+    ],
+  )
+
+  #v(0.25em)
+
+  Thus $"Regret"_T("AdaGrad-diag")$ and $"Regret"_T("OGD")$ have the same
+  order on dense gradients.
+
+  #v(0.25em)
+
+  *Takeaway.* AdaGrad is not always better than OGD. It is strong when the
+  gradient sequence is coordinate-sparse; in dense cases, the two bounds have
+  the same order.
 ]
 
 == Analysis Roadmap for Theorem 5.12
@@ -935,158 +1130,225 @@ gradient-norm term in (5.7).
   Choosing $eta$ balances the two terms and recovers Theorem 5.12.
 ]
 
-== Lemma 5.13: One-Step Identity
+== Lemma 5.13: Proof Details
 
 #[
-  #set text(size: 0.8em)
+  #set text(size: 0.48em)
+  #set par(leading: 0.44em)
 
-  The update is a gradient step in the current metric:
-  $ y_(t+1) = x_t - eta H_t^(-1) nabla_t . $
-
-  #v(0.35em)
-
-  Subtract $x^star$ and multiply by $H_t$:
+  By convexity, it suffices to bound the linearized regret:
   $
-    y_(t+1) - x^star
-      &= x_t - x^star - eta H_t^(-1) nabla_t, \
-    H_t (y_(t+1) - x^star)
-      &= H_t (x_t - x^star) - eta nabla_t .
+    "Regret"_T <= sum_(t=1)^T nabla_t^top (x_t - x^star).
   $
 
-  #v(0.45em)
+  #v(-0.15em)
 
-  Multiplying the transpose of the first line by the second line gives the
-  basic energy identity.
+  #grid(
+    columns: (1.05fr, 1fr),
+    gutter: 0.65em,
+    [
+      *One-step inequality.* With $y_(t+1)=x_t-eta H_t^(-1)nabla_t$
+      and $x_(t+1)=Pi_K^(H_t)(y_(t+1))$,
+      $
+        norm(y_(t+1)-x^star)_(H_t)^2
+          &= norm(x_t-x^star)_(H_t)^2
+             -2 eta nabla_t^top (x_t-x^star)
+             +eta^2 nabla_t^top H_t^(-1)nabla_t, \
+        norm(x_(t+1)-x^star)_(H_t)^2
+          &<= norm(y_(t+1)-x^star)_(H_t)^2,
+      $
+      hence
+      $
+        nabla_t^top (x_t-x^star)
+          <= eta/2 nabla_t^top H_t^(-1)nabla_t
+          + 1/(2 eta)(
+              norm(x_t-x^star)_(H_t)^2
+              - norm(x_(t+1)-x^star)_(H_t)^2
+            ). quad (*)
+      $
+
+      #v(-0.1em)
+
+      *Sum $(*).$*
+      $
+        sum_(t=1)^T nabla_t^top (x_t-x^star)
+          &<= eta/2 sum_(t=1)^T
+                nabla_t^top H_t^(-1)nabla_t
+             + 1/(2 eta) S .
+      $
+    ],
+    [
+      *Changing metrics telescope.* For
+      $
+        S = sum_(t=1)^T (
+          norm(x_t-x^star)_(H_t)^2
+          - norm(x_(t+1)-x^star)_(H_t)^2).
+      $
+      $
+        S
+          &= norm(x_1-x^star)_(H_0)^2
+             - norm(x_(T+1)-x^star)_(H_T)^2 \
+          &quad + sum_(t=1)^T
+             norm(x_t-x^star)_(H_t-H_(t-1))^2 .
+      $
+      Dropping the final non-positive term gives the drift term.
+
+      #v(-0.1em)
+
+      *BTL for the gradient term.* Define
+      $
+        Psi_t(H)=nabla_t nabla_t^top dot H^(-1),
+        quad Psi_0(H)="Tr"(H).
+      $
+      Since $H_t$ minimizes $sum_(i=0)^t Psi_i(H)$,
+      $
+        sum_(t=1)^T nabla_t^top H_t^(-1)nabla_t
+          &= sum_(t=1)^T Psi_t(H_t)
+           <= sum_(t=1)^T Psi_t(H_T)+Psi_0(H_T)-Psi_0(H_0) \
+          &= G_T dot H_T^(-1)+"Tr"(H_T).
+      $
+    ],
+  )
+
+  #v(-0.3em)
+
+  Therefore
+  $
+    "Regret"_T
+      <= eta/2 (G_T dot H_T^(-1)+"Tr"(H_T))
+        + 1/(2 eta) sum_(t=0)^T
+            norm(x_t-x^star)_(H_t-H_(t-1))^2 .
+  $
 ]
 
-== Lemma 5.13: Expanding the Square
+== Proposition 5.16: Two Matrix Optimizations
 
 #[
-  #set text(size: 0.78em)
+  #set text(size: 0.76em)
 
-  Expanding in the $H_t$-norm gives the textbook equation (5.8):
+  The optimizer in AdaGrad line 5 comes from the second problem below. For
+  $A succ.eq 0$,
+  $
+    (P_1) quad
+    &min_(X succ 0, "Tr"(X) <= 1) A dot X^(-1), \
+    (P_2) quad
+    &min_(X succ 0) { A dot X^(-1) + "Tr"(X) } .
+  $
 
   #v(0.25em)
 
+  *Exercise 11.* The trace-ball problem $(P_1)$ is exactly the exercise:
+  prove its minimizer and minimum value.
+
+  #v(0.35em)
+
+  Proposition 5.16 says
   $
-    norm(y_(t+1) - x^star)_(H_t)^2
-      &= norm(x_t - x^star)_(H_t)^2
-         - 2 eta nabla_t^top (x_t - x^star)
-         + eta^2 nabla_t^top H_t^(-1) nabla_t . quad (5.8)
-  $
-
-  #v(0.5em)
-
-  Rearranging this identity will isolate the one-step regret term
-  $nabla_t^top (x_t - x^star)$.
-]
-
-== Lemma 5.13: Projection Gives Descent
-
-#[
-  #set text(size: 0.78em)
-
-  Since $x_(t+1)$ is the projection of $y_(t+1)$ in the norm induced by $H_t$,
-  $ norm(y_(t+1) - x^star)_(H_t)^2
-      >= norm(x_(t+1) - x^star)_(H_t)^2 . $
-
-  #v(0.4em)
-
-  Combining this with (5.8):
-  $
-    nabla_t^top (x_t - x^star)
-      <= eta / 2 nabla_t^top H_t^(-1) nabla_t
-        + 1 / (2 eta) (
-            norm(x_t - x^star)_(H_t)^2
-            - norm(x_(t+1) - x^star)_(H_t)^2
-          ) .
+    X_1^* = A^(1/2) / "Tr"(A^(1/2)),
+    quad
+    min(P_1) = "Tr"(A^(1/2))^2,
+    \
+    X_2^* = A^(1/2),
+    quad
+    min(P_2) = 2 "Tr"(A^(1/2)).
   $
 
   #v(0.35em)
 
-  This is the OGD proof, except that the metric changes with $t$.
+  The diagonal case is the same proof after replacing $A$ by $"diag"(A)$.
+  I sketch both facts before using them in Lemma 5.14.
 ]
 
-== Lemma 5.13: Telescoping with Changing Metrics
+== Proposition 5.16: Trace-Ball Problem (Exercise 11)
 
 #[
   #set text(size: 0.72em)
 
-  Summing the one-step inequality from $t = 1$ to $T$:
+  Let $S = "Tr"(A^(1/2))$. For any $X succ 0$, Frobenius Cauchy-Schwarz gives
   $
-    sum_(t=1)^T nabla_t^top (x_t - x^star)
-      &<= eta / 2 sum_(t=1)^T nabla_t^top H_t^(-1) nabla_t
-        + 1 / (2 eta) norm(x_1 - x^star)_(H_0)^2 \
-      &quad
-        + 1 / (2 eta) sum_(t=1)^T (
-            norm(x_t - x^star)_(H_t)^2
-            - norm(x_t - x^star)_(H_(t-1))^2
-          ) \
-      &quad
-        - 1 / (2 eta) norm(x_(T+1) - x^star)_(H_T)^2 .
+    S
+      &= "Tr"(A^(1/2))
+       = "Tr"(A^(1/2) X^(-1/2) X^(1/2)) \
+      &<= sqrt("Tr"(A^(1/2) X^(-1) A^(1/2)))
+          sqrt("Tr"(X)) \
+      &= sqrt(A dot X^(-1)) sqrt("Tr"(X)).
   $
 
   #v(0.35em)
 
-  With $H_0 = 0$ and dropping the final nonnegative term,
+  Therefore, if $"Tr"(X) <= 1$,
   $
-    sum_t nabla_t^top (x_t - x^star)
-      <= eta / 2 sum_t nabla_t^top H_t^(-1) nabla_t
-        + 1 / (2 eta) sum_(t=0)^T
-            norm(x_t - x^star)_(H_t - H_(t-1))^2 .
+    A dot X^(-1) >= S^2 = "Tr"(A^(1/2))^2.
+  $
+
+  #v(0.35em)
+
+  Equality in Cauchy-Schwarz requires
+  $X^(-1/2) A^(1/2) = c X^(1/2)$, hence $A^(1/2) = c X$.
+  The trace constraint is tight, so
+  $
+    X = A^(1/2) / "Tr"(A^(1/2)).
   $
 ]
 
-== Lemma 5.13: BTL Controls the Gradient Term
+== Proposition 5.16: Penalized Problem
 
 #[
   #set text(size: 0.76em)
 
-  Define
-  $ Psi_t(H) = nabla_t nabla_t^top dot H^(-1),
-    quad Psi_0(H) = "Tr"(H). $
-
-  #v(0.3em)
-
-  By construction, $H_t$ minimizes $sum_(i=0)^t Psi_i(H)$. Applying the
-  BTL Lemma 5.4,
+  Use the same inequality, now without the trace constraint. Put
+  $t = "Tr"(X) > 0$ and $S = "Tr"(A^(1/2))$. Then
   $
-    sum_(t=1)^T nabla_t^top H_t^(-1) nabla_t
-      &= sum_(t=1)^T Psi_t(H_t) \
-      &<= sum_(t=1)^T Psi_t(H_T) + Psi_0(H_T) - Psi_0(H_0) \
-      &= G_T dot H_T^(-1) + "Tr"(H_T).
+    A dot X^(-1) >= S^2 / t.
   $
 
   #v(0.35em)
 
-  Substituting this into the previous slide proves Lemma 5.13.
+  So the objective is bounded by a one-variable problem:
+  $
+    A dot X^(-1) + "Tr"(X)
+      &>= S^2 / t + t \
+      &= ((t - S)^2) / t + 2 S
+      >= 2 S .
+  $
+
+  #v(0.35em)
+
+  The lower bound is attained at $t = S$ and equality in the Frobenius
+  Cauchy-Schwarz step, which together give
+  $
+    X = A^(1/2).
+  $
 ]
 
-== Lemma 5.14: Explicit Optimizer
+== Proposition 5.16: Diagonal Case
 
 #[
   #set text(size: 0.76em)
 
-  Proposition 5.16 solves the optimization in line 5. For $A succ.eq 0$,
+  If $X$ is diagonal, only the diagonal of $A$ is visible:
   $
-    arg min_(X succ.eq 0) { A dot X^(-1) + "Tr"(X) }
-      = A^(1/2).
-  $
-
-  #v(0.35em)
-
-  With the diagonal constraint, the optimizer is
-  $
-    arg min_(X succ.eq 0, space X = "diag"(X))
-      { A dot X^(-1) + "Tr"(X) }
-      = ("diag"(A))^(1/2).
+    A dot X^(-1) = "diag"(A) dot X^(-1).
   $
 
   #v(0.35em)
 
-  Applying this to $A = G_T$ gives
+  Thus the same proof applies with $B = "diag"(A)$:
   $
-    H_T = G_T^(1/2) quad "or" quad H_T = ("diag"(G_T))^(1/2).
+    "trace-ball optimizer:" quad
+      X_1^* = B^(1/2) / "Tr"(B^(1/2)),
+    \
+    "penalized optimizer:" quad
+      X_2^* = B^(1/2).
+  $
+
+  #v(0.35em)
+
+  Applying the second formula to $A = G_T$ gives the AdaGrad matrices:
+  $
+    H_T = G_T^(1/2)
+    quad "or" quad
+    H_T = ("diag"(G_T))^(1/2).
   $
 ]
 
@@ -1286,4 +1548,250 @@ $ x^top y <= norm(x) dot norm(y)_* . $
   Multiplying both sides by $norm(x) > 0$ yields
   $ x^top y <= norm(x) dot norm(y)_* . $
 ]
+]
+
+== Problem 5: Negative Entropy Setup
+
+#[
+  #set text(size: 0.78em)
+
+  #definition([Setup])[
+    The decision set is the $n$-dimensional simplex
+    $
+      Delta_n = { x in RR^n_(>= 0) : sum_(i=1)^n x_i = 1 },
+    $
+    and the regularizer is negative entropy
+    $
+      R(x) = sum_(i=1)^n x_i log x_i,
+      quad 0 log 0 := 0 .
+    $
+  ]
+
+  #v(0.35em)
+
+  The Bregman divergence is
+  $
+    D_R(x, y)
+      := R(x) - R(y) - chevron.l nabla R(y), x - y chevron.r .
+  $
+  Since $nabla R(y)_i = log y_i + 1$,
+  $
+    chevron.l nabla R(y), x - y chevron.r
+      = sum_i (log y_i + 1)(x_i - y_i).
+  $
+]
+
+== Problem 5: Bregman Divergence is KL
+
+#[
+  #set text(size: 0.78em)
+
+  Substitute the previous identities into the Bregman divergence:
+  $
+    D_R(x, y)
+      &= sum_i x_i log x_i - sum_i y_i log y_i
+         - sum_i (log y_i + 1)(x_i - y_i) \
+      &= sum_i x_i log(x_i / y_i) - sum_i x_i + sum_i y_i .
+  $
+
+  #v(0.35em)
+
+  For $x, y in Delta_n$, the last two terms cancel, hence
+  $
+    D_R(x, y)
+      = sum_i x_i log(x_i / y_i).
+  $
+
+  #v(0.4em)
+
+  #theorem("Relative entropy")[
+    $
+      D_R(x, y)
+        = "KL"(x || y)
+        = sum_i x_i log(x_i / y_i).
+    $
+  ]
+
+  #v(0.35em)
+
+  This is the relative entropy geometry underlying multiplicative-weights
+  style updates.
+]
+
+== Problem 5: Diameter Bound
+
+#[
+  #set text(size: 0.76em)
+
+  For this exercise, the diameter is the range of the regularizer on the
+  simplex:
+  $
+    D_R := max_(x in Delta_n) R(x) - min_(x in Delta_n) R(x).
+  $
+
+  #v(0.25em)
+
+  #text(fill: red, weight: "bold")[
+    Note: if we instead used $max_(x,y in Delta_n) D_R(x,y)$, the value would
+    be infinite on the boundary whenever $y_i = 0$ and $x_i > 0$.
+  ]
+
+  #v(0.3em)
+
+  #grid(
+    columns: (1fr, 1fr),
+    gutter: 1.1em,
+    [
+      *Minimum.* By convexity, the minimum occurs at the uniform point
+      $u = (1/n, ..., 1/n)$:
+      $
+        R(u)
+          = sum_i 1/n log(1/n)
+          = -log n .
+      $
+    ],
+    [
+      *Maximum.* The maximum occurs at a vertex, say
+      $e_1 = (1, 0, ..., 0)$:
+      $
+        R(e_1)
+          = 1 log 1 + sum_(i != 1) 0 log 0
+          = 0 .
+      $
+    ],
+  )
+
+  #v(0.35em)
+
+  Therefore
+  $
+    D_R = 0 - (-log n) = log n .
+  $
+
+  #v(0.2em)
+
+  #theorem("Diameter bound")[
+    $
+      D_R <= log n,
+      quad "in fact" quad
+      D_R = log n .
+    $
+  ]
+]
+
+== Problem 5: Projection Objective
+
+#[
+  #set text(size: 0.78em)
+
+  Let $y in RR^n_(> 0)$ and project it onto the simplex:
+  $
+    x^star = arg min_(x in Delta_n) D_R(x, y).
+  $
+
+  #v(0.25em)
+
+  From the previous calculation,
+  $
+    D_R(x, y)
+      = sum_i x_i log(x_i / y_i) - sum_i x_i + sum_i y_i .
+  $
+  Since $x in Delta_n$, $sum_i x_i = 1$, and $sum_i y_i$ is constant in $x$.
+  Thus the essential problem is
+  $
+    min_(x in Delta_n) sum_i x_i log(x_i / y_i).
+  $
+]
+
+== Problem 5: Projection First-Order Condition
+
+#[
+  #set text(size: 0.78em)
+
+  The Lagrangian for the constraint $sum_i x_i = 1$ is
+  $
+    cal(L)(x, lambda)
+      = sum_i x_i log(x_i / y_i)
+        + lambda (sum_i x_i - 1).
+  $
+  The first-order condition gives
+  $
+    (partial cal(L)) / (partial x_i)
+      = log(x_i / y_i) + 1 + lambda = 0.
+  $
+  Hence $x_i / y_i = C$ for a constant $C$, so $x_i = C y_i$.
+]
+
+== Problem 5: Projection Formula
+
+#[
+  #set text(size: 0.82em)
+
+  #v(0.35em)
+
+  Enforcing $sum_i x_i = 1$ gives
+  $
+    C sum_i y_i = 1,
+    quad
+    C = 1 / norm(y)_1,
+    quad
+    x_i^star = y_i / norm(y)_1 .
+  $
+
+  #theorem("Projection formula")[
+    $
+      Pi_(Delta_n)^R (y) = y / norm(y)_1 .
+    $
+  ]
+
+  #v(0.35em)
+
+  Thus Bregman projection for negative entropy simply rescales a positive
+  vector so that its coordinates sum to one.
+]
+
+== Problem 5: Takeaway
+
+#[
+  #set text(size: 0.82em)
+
+  For the negative entropy regularizer
+  $
+    R(x) = sum_i x_i log x_i
+  $
+  on the simplex $Delta_n$:
+
+  #v(0.35em)
+
+  #theorem("Summary")[
+    #grid(
+      columns: (1.1fr, 4fr),
+      column-gutter: 0.9em,
+      row-gutter: 0.35em,
+      [*Divergence.*],
+      [
+        $
+          D_R(x, y) = "KL"(x || y) = sum_i x_i log(x_i / y_i).
+        $
+      ],
+      [*Diameter.*],
+      [
+        $
+          max_(x in Delta_n) R(x) - min_(x in Delta_n) R(x) = log n.
+        $
+      ],
+      [*Projection.*],
+      [
+        $
+          Pi_(Delta_n)^R(y) = y / norm(y)_1.
+        $
+      ],
+    )
+  ]
+
+  #v(0.45em)
+
+  *Interpretation.* In negative-entropy geometry, projecting a positive vector
+  onto the simplex is not Euclidean projection. It is just normalization:
+  divide by its $ell_1$ norm to return to a probability distribution.
 ]
