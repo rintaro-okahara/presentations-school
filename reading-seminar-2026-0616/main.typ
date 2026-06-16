@@ -1130,95 +1130,158 @@ gradient-norm term in (5.7).
   Choosing $eta$ balances the two terms and recovers Theorem 5.12.
 ]
 
-== Lemma 5.13: Proof Details
+== Lemma 5.13: One-Step Inequality
 
 #[
-  #set text(size: 0.48em)
-  #set par(leading: 0.44em)
+  #set text(size: 0.72em)
 
   By convexity, it suffices to bound the linearized regret:
   $
     "Regret"_T <= sum_(t=1)^T nabla_t^top (x_t - x^star).
   $
 
-  #v(-0.15em)
+  #v(0.3em)
 
-  #grid(
-    columns: (1.05fr, 1fr),
-    gutter: 0.65em,
-    [
-      *One-step inequality.* With $y_(t+1)=x_t-eta H_t^(-1)nabla_t$
-      and $x_(t+1)=Pi_K^(H_t)(y_(t+1))$,
-      $
-        norm(y_(t+1)-x^star)_(H_t)^2
-          &= norm(x_t-x^star)_(H_t)^2
-             -2 eta nabla_t^top (x_t-x^star)
-             +eta^2 nabla_t^top H_t^(-1)nabla_t, \
-        norm(x_(t+1)-x^star)_(H_t)^2
-          &<= norm(y_(t+1)-x^star)_(H_t)^2,
-      $
-      hence
-      $
-        nabla_t^top (x_t-x^star)
-          <= eta/2 nabla_t^top H_t^(-1)nabla_t
-          + 1/(2 eta)(
-              norm(x_t-x^star)_(H_t)^2
-              - norm(x_(t+1)-x^star)_(H_t)^2
-            ). quad (*)
-      $
+  From the update $y_(t+1)=x_t-eta H_t^(-1)nabla_t$,
+  $
+    y_(t+1)-x^star
+      &= x_t-x^star-eta H_t^(-1)nabla_t, \
+    H_t (y_(t+1)-x^star)
+      &= H_t (x_t-x^star)-eta nabla_t.
+  $
 
-      #v(-0.1em)
+  #v(0.25em)
 
-      *Sum $(*).$*
-      $
-        sum_(t=1)^T nabla_t^top (x_t-x^star)
-          &<= eta/2 sum_(t=1)^T
-                nabla_t^top H_t^(-1)nabla_t
-             + 1/(2 eta) S .
-      $
-    ],
-    [
-      *Changing metrics telescope.* For
-      $
-        S = sum_(t=1)^T (
+  Multiplying the first line by the second gives
+  $
+    norm(y_(t+1)-x^star)_(H_t)^2
+      = norm(x_t-x^star)_(H_t)^2
+        -2 eta nabla_t^top (x_t-x^star)
+        + eta^2 nabla_t^top H_t^(-1)nabla_t. quad (5.8)
+  $
+
+  #v(0.25em)
+
+  Since $x_(t+1)$ is the $H_t$-projection of $y_(t+1)$,
+  $ norm(x_(t+1)-x^star)_(H_t)^2
+    <= norm(y_(t+1)-x^star)_(H_t)^2 $. Therefore
+  $
+    nabla_t^top (x_t-x^star)
+      <= eta/2 nabla_t^top H_t^(-1)nabla_t
+      + 1/(2 eta)(
           norm(x_t-x^star)_(H_t)^2
-          - norm(x_(t+1)-x^star)_(H_t)^2).
-      $
-      $
-        S
-          &= norm(x_1-x^star)_(H_0)^2
-             - norm(x_(T+1)-x^star)_(H_T)^2 \
-          &quad + sum_(t=1)^T
-             norm(x_t-x^star)_(H_t-H_(t-1))^2 .
-      $
-      Dropping the final non-positive term gives the drift term.
+          - norm(x_(t+1)-x^star)_(H_t)^2
+        ). quad (*)
+  $
+]
 
-      #v(-0.1em)
+== Lemma 5.13: Summing the One-Step Bound
 
-      *BTL for the gradient term.* Define
-      $
-        Psi_t(H)=nabla_t nabla_t^top dot H^(-1),
-        quad Psi_0(H)="Tr"(H).
-      $
-      Since $H_t$ minimizes $sum_(i=0)^t Psi_i(H)$,
-      $
-        sum_(t=1)^T nabla_t^top H_t^(-1)nabla_t
-          &= sum_(t=1)^T Psi_t(H_t)
-           <= sum_(t=1)^T Psi_t(H_T)+Psi_0(H_T)-Psi_0(H_0) \
-          &= G_T dot H_T^(-1)+"Tr"(H_T).
-      $
-    ],
-  )
+#[
+  #set text(size: 0.74em)
 
-  #v(-0.3em)
+  Sum $(*)$ from $t=1$ to $T$ and isolate the metric-dependent part:
+  $
+    sum_(t=1)^T nabla_t^top (x_t-x^star)
+      <= eta/2 sum_(t=1)^T nabla_t^top H_t^(-1)nabla_t
+        + 1/(2 eta) S,
+  $
+  where
+  $
+    S = sum_(t=1)^T (
+      norm(x_t-x^star)_(H_t)^2
+      - norm(x_(t+1)-x^star)_(H_t)^2).
+  $
 
-  Therefore
+  #v(0.45em)
+
+  To see the leftover term, re-index the second sum:
+  $
+    sum_(t=1)^T norm(x_(t+1)-x^star)_(H_t)^2
+      = sum_(t=2)^(T+1) norm(x_t-x^star)_(H_(t-1))^2 .
+  $
+
+  #v(0.45em)
+
+  Hence the usual telescope is interrupted exactly when the metric changes:
+  $
+    S
+      &= norm(x_1-x^star)_(H_1)^2
+         - norm(x_(T+1)-x^star)_(H_T)^2 \
+      &quad + sum_(t=2)^T (
+          norm(x_t-x^star)_(H_t)^2
+          - norm(x_t-x^star)_(H_(t-1))^2
+        ).
+  $
+]
+
+== Lemma 5.13: The Drift Term
+
+#[
+  #set text(size: 0.76em)
+
+  Since $H_0 = 0$, the previous slide can be written compactly as
+  $
+    S
+      = - norm(x_(T+1)-x^star)_(H_T)^2
+        + sum_(t=1)^T
+          norm(x_t-x^star)_(H_t-H_(t-1))^2 .
+  $
+
+  #v(0.45em)
+
+  The final term is non-positive, so
+  $
+    S
+      <= sum_(t=1)^T
+          norm(x_t-x^star)_(H_t-H_(t-1))^2 .
+  $
+
+  #v(0.45em)
+
+  Substituting this into the summed one-step bound gives
+  $
+    sum_(t=1)^T nabla_t^top (x_t-x^star)
+      <= eta/2 sum_(t=1)^T nabla_t^top H_t^(-1)nabla_t
+        + 1/(2 eta) sum_(t=1)^T
+          norm(x_t-x^star)_(H_t-H_(t-1))^2 .
+  $
+]
+
+== Lemma 5.13: BTL for the Gradient Term
+
+#[
+  #set text(size: 0.72em)
+
+  Define
+  $
+    Psi_t(H) = nabla_t nabla_t^top dot H^(-1),
+    quad
+    Psi_0(H) = "Tr"(H).
+  $
+  By construction, $H_t$ minimizes $sum_(i=0)^t Psi_i(H)$. Hence the
+  FTL-BTL Lemma 5.4 gives
+  $
+    sum_(t=1)^T nabla_t^top H_t^(-1)nabla_t
+      &= sum_(t=1)^T Psi_t(H_t) \
+      &<= sum_(t=1)^T Psi_t(H_T) + Psi_0(H_T) - Psi_0(H_0) \
+      &= G_T dot H_T^(-1) + "Tr"(H_T).
+  $
+
+  #v(0.35em)
+
+  Substituting this into the previous slide proves Lemma 5.13:
   $
     "Regret"_T
-      <= eta/2 (G_T dot H_T^(-1)+"Tr"(H_T))
-        + 1/(2 eta) sum_(t=0)^T
+      <= eta/2 (G_T dot H_T^(-1) + "Tr"(H_T))
+        + 1/(2 eta) sum_(t=1)^T
             norm(x_t-x^star)_(H_t-H_(t-1))^2 .
   $
+
+  #v(0.25em)
+
+  This is the same drift term that Lemma 5.15 bounds by
+  $D_*^2 "Tr"(H_T)$.
 ]
 
 == Proposition 5.16: Two Matrix Optimizations
@@ -1352,7 +1415,7 @@ gradient-norm term in (5.7).
   $
 ]
 
-== Lemma 5.14: Gradient Term is at Most Trace
+== Proof of Lemma 5.14: Gradient Term
 
 #[
   #set text(size: 0.78em)
@@ -1381,7 +1444,7 @@ gradient-norm term in (5.7).
   $ G_T dot H_T^(-1) <= "Tr"(H_T). $
 ]
 
-== Lemma 5.15: Diagonal Drift Term
+== Proof of Lemma 5.15: Diagonal Drift
 
 #[
   #set text(size: 0.75em)
@@ -1402,7 +1465,7 @@ gradient-norm term in (5.7).
   The trace telescopes because the metric increments are PSD.
 ]
 
-== Lemma 5.15: Full-Matrix Drift Term
+== Proof of Lemma 5.15: Full-Matrix Drift
 
 #[
   #set text(size: 0.75em)
@@ -1548,250 +1611,4 @@ $ x^top y <= norm(x) dot norm(y)_* . $
   Multiplying both sides by $norm(x) > 0$ yields
   $ x^top y <= norm(x) dot norm(y)_* . $
 ]
-]
-
-== Problem 5: Negative Entropy Setup
-
-#[
-  #set text(size: 0.78em)
-
-  #definition([Setup])[
-    The decision set is the $n$-dimensional simplex
-    $
-      Delta_n = { x in RR^n_(>= 0) : sum_(i=1)^n x_i = 1 },
-    $
-    and the regularizer is negative entropy
-    $
-      R(x) = sum_(i=1)^n x_i log x_i,
-      quad 0 log 0 := 0 .
-    $
-  ]
-
-  #v(0.35em)
-
-  The Bregman divergence is
-  $
-    D_R(x, y)
-      := R(x) - R(y) - chevron.l nabla R(y), x - y chevron.r .
-  $
-  Since $nabla R(y)_i = log y_i + 1$,
-  $
-    chevron.l nabla R(y), x - y chevron.r
-      = sum_i (log y_i + 1)(x_i - y_i).
-  $
-]
-
-== Problem 5: Bregman Divergence is KL
-
-#[
-  #set text(size: 0.78em)
-
-  Substitute the previous identities into the Bregman divergence:
-  $
-    D_R(x, y)
-      &= sum_i x_i log x_i - sum_i y_i log y_i
-         - sum_i (log y_i + 1)(x_i - y_i) \
-      &= sum_i x_i log(x_i / y_i) - sum_i x_i + sum_i y_i .
-  $
-
-  #v(0.35em)
-
-  For $x, y in Delta_n$, the last two terms cancel, hence
-  $
-    D_R(x, y)
-      = sum_i x_i log(x_i / y_i).
-  $
-
-  #v(0.4em)
-
-  #theorem("Relative entropy")[
-    $
-      D_R(x, y)
-        = "KL"(x || y)
-        = sum_i x_i log(x_i / y_i).
-    $
-  ]
-
-  #v(0.35em)
-
-  This is the relative entropy geometry underlying multiplicative-weights
-  style updates.
-]
-
-== Problem 5: Diameter Bound
-
-#[
-  #set text(size: 0.76em)
-
-  For this exercise, the diameter is the range of the regularizer on the
-  simplex:
-  $
-    D_R := max_(x in Delta_n) R(x) - min_(x in Delta_n) R(x).
-  $
-
-  #v(0.25em)
-
-  #text(fill: red, weight: "bold")[
-    Note: if we instead used $max_(x,y in Delta_n) D_R(x,y)$, the value would
-    be infinite on the boundary whenever $y_i = 0$ and $x_i > 0$.
-  ]
-
-  #v(0.3em)
-
-  #grid(
-    columns: (1fr, 1fr),
-    gutter: 1.1em,
-    [
-      *Minimum.* By convexity, the minimum occurs at the uniform point
-      $u = (1/n, ..., 1/n)$:
-      $
-        R(u)
-          = sum_i 1/n log(1/n)
-          = -log n .
-      $
-    ],
-    [
-      *Maximum.* The maximum occurs at a vertex, say
-      $e_1 = (1, 0, ..., 0)$:
-      $
-        R(e_1)
-          = 1 log 1 + sum_(i != 1) 0 log 0
-          = 0 .
-      $
-    ],
-  )
-
-  #v(0.35em)
-
-  Therefore
-  $
-    D_R = 0 - (-log n) = log n .
-  $
-
-  #v(0.2em)
-
-  #theorem("Diameter bound")[
-    $
-      D_R <= log n,
-      quad "in fact" quad
-      D_R = log n .
-    $
-  ]
-]
-
-== Problem 5: Projection Objective
-
-#[
-  #set text(size: 0.78em)
-
-  Let $y in RR^n_(> 0)$ and project it onto the simplex:
-  $
-    x^star = arg min_(x in Delta_n) D_R(x, y).
-  $
-
-  #v(0.25em)
-
-  From the previous calculation,
-  $
-    D_R(x, y)
-      = sum_i x_i log(x_i / y_i) - sum_i x_i + sum_i y_i .
-  $
-  Since $x in Delta_n$, $sum_i x_i = 1$, and $sum_i y_i$ is constant in $x$.
-  Thus the essential problem is
-  $
-    min_(x in Delta_n) sum_i x_i log(x_i / y_i).
-  $
-]
-
-== Problem 5: Projection First-Order Condition
-
-#[
-  #set text(size: 0.78em)
-
-  The Lagrangian for the constraint $sum_i x_i = 1$ is
-  $
-    cal(L)(x, lambda)
-      = sum_i x_i log(x_i / y_i)
-        + lambda (sum_i x_i - 1).
-  $
-  The first-order condition gives
-  $
-    (partial cal(L)) / (partial x_i)
-      = log(x_i / y_i) + 1 + lambda = 0.
-  $
-  Hence $x_i / y_i = C$ for a constant $C$, so $x_i = C y_i$.
-]
-
-== Problem 5: Projection Formula
-
-#[
-  #set text(size: 0.82em)
-
-  #v(0.35em)
-
-  Enforcing $sum_i x_i = 1$ gives
-  $
-    C sum_i y_i = 1,
-    quad
-    C = 1 / norm(y)_1,
-    quad
-    x_i^star = y_i / norm(y)_1 .
-  $
-
-  #theorem("Projection formula")[
-    $
-      Pi_(Delta_n)^R (y) = y / norm(y)_1 .
-    $
-  ]
-
-  #v(0.35em)
-
-  Thus Bregman projection for negative entropy simply rescales a positive
-  vector so that its coordinates sum to one.
-]
-
-== Problem 5: Takeaway
-
-#[
-  #set text(size: 0.82em)
-
-  For the negative entropy regularizer
-  $
-    R(x) = sum_i x_i log x_i
-  $
-  on the simplex $Delta_n$:
-
-  #v(0.35em)
-
-  #theorem("Summary")[
-    #grid(
-      columns: (1.1fr, 4fr),
-      column-gutter: 0.9em,
-      row-gutter: 0.35em,
-      [*Divergence.*],
-      [
-        $
-          D_R(x, y) = "KL"(x || y) = sum_i x_i log(x_i / y_i).
-        $
-      ],
-      [*Diameter.*],
-      [
-        $
-          max_(x in Delta_n) R(x) - min_(x in Delta_n) R(x) = log n.
-        $
-      ],
-      [*Projection.*],
-      [
-        $
-          Pi_(Delta_n)^R(y) = y / norm(y)_1.
-        $
-      ],
-    )
-  ]
-
-  #v(0.45em)
-
-  *Interpretation.* In negative-entropy geometry, projecting a positive vector
-  onto the simplex is not Euclidean projection. It is just normalization:
-  divide by its $ell_1$ norm to return to a probability distribution.
 ]
